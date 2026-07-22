@@ -1,0 +1,27 @@
+---
+description: lp-history-reconstructor conventions (structure, style, RPC, indexing)
+alwaysApply: true
+---
+
+# lp-history-reconstructor
+
+Uniswap V2 LP event sourcing: eth_getLogs backfill → Parquet → fold Sync → verify getReserves().
+
+## Python style
+
+- Python 3.12, type hints on public signatures, functions over classes.
+- Short docstrings that explain the "why".
+- Lint: `uv run ruff check .` must pass before any commit.
+- English only in comments, logs, and docs.
+
+## Mandatory patterns
+
+- New parameter → YAML in `config/` + pydantic in `settings.py`. Never hardcode.
+- Secrets (`LP_ETH_RPC_URL`) only via env / `.env`, never YAML.
+- Always write events through the Parquet loader; persist checkpoints after each chunk.
+- Business metrics (IL, fees, PnL) belong in later dbt phases — not in Python fold logic yet.
+
+## Tests
+
+- Mock RPC with respx; fixtures under `tests/fixtures/`.
+- Run with `uv run pytest`.

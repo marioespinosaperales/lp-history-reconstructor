@@ -1,0 +1,9 @@
+# Pipeline parameters. Overridable via LP_ env vars where noted.
+data_dir: ./data
+checkpoint_dir: ./data/checkpoints
+chunk_size: 2000          # blocks per eth_getLogs request
+lookback_blocks: 50000    # Phase 1 window (~1 week); raise for fuller history
+confirmations: 12         # tip - confirmations is treated as final
+rpc_timeout_seconds: 30
+rpc_max_retries: 5
+rpc_backoff_seconds: 1.5

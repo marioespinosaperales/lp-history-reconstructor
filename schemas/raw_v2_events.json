@@ -1,0 +1,21 @@
+{
+  "name": "raw_v2_events",
+  "description": "Decoded Uniswap V2 pool events (Swap, Mint, Burn, Sync)",
+  "fields": [
+    {"name": "pool_address", "type": "string"},
+    {"name": "event_name", "type": "string"},
+    {"name": "block_number", "type": "int64"},
+    {"name": "log_index", "type": "int64"},
+    {"name": "tx_hash", "type": "string"},
+    {"name": "reserve0", "type": "string", "nullable": true},
+    {"name": "reserve1", "type": "string", "nullable": true},
+    {"name": "amount0_in", "type": "string", "nullable": true},
+    {"name": "amount1_in", "type": "string", "nullable": true},
+    {"name": "amount0_out", "type": "string", "nullable": true},
+    {"name": "amount1_out", "type": "string", "nullable": true},
+    {"name": "amount0", "type": "string", "nullable": true},
+    {"name": "amount1", "type": "string", "nullable": true},
+    {"name": "sender", "type": "string", "nullable": true},
+    {"name": "to_address", "type": "string", "nullable": true}
+  ]
+}

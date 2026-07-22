@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Data & warehouse: NEVER commit
+data/
+warehouse/
+logs/
+*.duckdb
+*.duckdb.wal
+
+# Secrets
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db

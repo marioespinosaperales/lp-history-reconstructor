@@ -65,6 +65,15 @@ class RpcClient:
                 if "error" in body and body["error"]:
                     raise RuntimeError(f"RPC error for {method}: {body['error']}")
                 return body["result"]
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code in RETRYABLE_STATUS:
+                    last_error = exc
+                    continue
+                raise RuntimeError(
+                    f"RPC HTTP {exc.response.status_code} for {method}. "
+                    "Public endpoints often block eth_getLogs — use Alchemy "
+                    "(set LP_ETH_RPC_URL in .env)."
+                ) from exc
             except (httpx.TransportError, httpx.TimeoutException) as exc:
                 last_error = exc
                 continue

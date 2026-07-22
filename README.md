@@ -21,9 +21,10 @@ flowchart LR
 - **Measurable data quality**: reconstructed `(reserve0, reserve1)` must match on-chain exactly
 - **Config-driven pools**: add a pool address in `config/pools.yaml`, no code change
 
-Phase 1 scopes a recent block window (`lookback_blocks`, default 50k) so the pipeline
-is demoable without burning an Alchemy free-tier quota on years of WETH/USDC history.
-Raising that number (or starting from the pool's deployment block) is a config change.
+Phase 1 scopes a recent block window (`lookback_blocks`) so the pipeline is
+demoable on Alchemy's free tier. **Free-tier Alchemy caps `eth_getLogs` at a
+10-block range**, so `chunk_size` defaults to 10. Raising the lookback (or moving
+to PAYG) is a config change — checkpoints make resume safe.
 
 ## Quickstart
 

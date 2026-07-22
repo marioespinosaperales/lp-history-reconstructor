@@ -60,10 +60,16 @@ class RpcClient:
                         response=response,
                     )
                     continue
-                response.raise_for_status()
-                body = response.json()
-                if "error" in body and body["error"]:
+                # Alchemy often returns JSON-RPC errors with HTTP 400 — surface them.
+                try:
+                    body = response.json()
+                except Exception:
+                    body = None
+                if isinstance(body, dict) and body.get("error"):
                     raise RuntimeError(f"RPC error for {method}: {body['error']}")
+                response.raise_for_status()
+                if not isinstance(body, dict):
+                    raise RuntimeError(f"RPC invalid response for {method}")
                 return body["result"]
             except httpx.HTTPStatusError as exc:
                 if exc.response.status_code in RETRYABLE_STATUS:
@@ -71,8 +77,7 @@ class RpcClient:
                     continue
                 raise RuntimeError(
                     f"RPC HTTP {exc.response.status_code} for {method}. "
-                    "Public endpoints often block eth_getLogs — use Alchemy "
-                    "(set LP_ETH_RPC_URL in .env)."
+                    "Check LP_ETH_RPC_URL / Alchemy plan limits."
                 ) from exc
             except (httpx.TransportError, httpx.TimeoutException) as exc:
                 last_error = exc

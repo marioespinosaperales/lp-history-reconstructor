@@ -5,12 +5,18 @@ select
     count(*) as positions,
     count(distinct wallet) as wallets,
     avg(range_width_ticks) as avg_range_width_ticks,
+    avg(range_width_pct) as avg_range_width_pct,
     sum(deposited_token0) as deposited_token0,
     sum(collected_token0) as collected_token0,
     sum(fees_proxy_token0) as fees_proxy_token0,
     sum(hodl_token0) as hodl_token0,
     sum(pnl_vs_hodl_token0) as pnl_vs_hodl_token0,
     avg(pnl_vs_hodl_token0) as avg_pnl_vs_hodl_token0,
+    -- Capital-weighted vs equal-weight: median % favors the "small deposit, good %" story
+    avg(fees_on_deposit_pct) as avg_fees_on_deposit_pct,
+    median(fees_on_deposit_pct) as median_fees_on_deposit_pct,
+    avg(pnl_vs_hodl_pct) as avg_pnl_vs_hodl_pct,
+    median(pnl_vs_hodl_pct) as median_pnl_vs_hodl_pct,
     sum(case when pnl_vs_hodl_token0 > 0 then 1 else 0 end) as positions_beat_hodl,
     any_value(token0_symbol) as token0_symbol
 from {{ ref('mart_position_pnl') }}

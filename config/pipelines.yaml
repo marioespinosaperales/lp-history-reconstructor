@@ -3,11 +3,12 @@ data_dir: ./data
 checkpoint_dir: ./data/checkpoints
 duckdb_path: ./warehouse/lp.duckdb
 chunk_size: 10            # Alchemy Free tier caps eth_getLogs at 10 blocks
-lookback_blocks: 2500     # ~8–10h of Eth history; enough for Collect cycles in marts
+# ~1 month ≈ 216000 blocks. Alchemy Free (10-block getLogs) → ~40k+ RPC calls; needs PAYG.
+lookback_blocks: 10000    # ~1.5 days for hourly refresh; raise only with higher Alchemy quota
 confirmations: 12         # tip - confirmations is treated as final
 rpc_timeout_seconds: 30
 rpc_max_retries: 5
 rpc_backoff_seconds: 1.5
 npm_verify_sample: 5
-npm_snapshot_max_calls: 400
-npm_snapshot_max_matches: 40
+npm_snapshot_max_calls: 800
+npm_snapshot_max_matches: 80

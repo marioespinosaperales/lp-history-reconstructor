@@ -89,13 +89,12 @@ scored as (
                 + (deposited_amount1_raw / power(10.0, token1_decimals))
                 * exit_token0_per_token1
         end as hodl_token0,
-        -- Clear exit: liquidity gone on-chain, or ≥85% of deposit withdrawn in-window
+        -- Clear exit: most of the deposit was withdrawn in-window (principal returned).
+        -- Do NOT use on-chain L=0 alone — that fires when Decrease sits outside the
+        -- lookback and only Collect remains, producing fake -100% IL.
         (
             deposited_token0 > 0
-            and (
-                coalesce(on_chain_liquidity, 0) = 0
-                or withdrawn_token0 >= 0.85 * deposited_token0
-            )
+            and withdrawn_token0 >= 0.85 * deposited_token0
         ) as is_clear_exit,
         first_block,
         last_block,

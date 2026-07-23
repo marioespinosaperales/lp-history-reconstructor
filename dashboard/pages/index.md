@@ -6,7 +6,8 @@ Uniswap V3 USDC/WETH (0.05%): NPM wallets → **fees %** and **IL % on clear exi
 
 - Prefer **% returns** (fees/deposit) over absolute USDC.
 - `range_width_ticks` are Uniswap ticks. Width % = `1.0001^ticks − 1` (null for **full-range** ≈ V2-style).
-- **IL vs HODL** only when the position clearly exited in-window (on-chain L=0 or ≥85% withdrawn). Open positions no longer show fake −99% “losses”.
+- **IL vs HODL** only when ≥85% of the deposit was **withdrawn in-window** (Decrease).
+  On-chain L=0 alone is not enough — that used to mark fake −100% IL when only fees were collected.
 - Wallets missing from Transfer history are filled via `ownerOf(tokenId)`.
 
 Source: [lp-history-reconstructor](https://github.com/marioespinosaperales/lp-history-reconstructor).

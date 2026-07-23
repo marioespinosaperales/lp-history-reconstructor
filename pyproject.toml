@@ -5,6 +5,8 @@ description = "Uniswap V2 LP history reconstructor: event backfill, state fold, 
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "dbt-core>=1.9",
+    "dbt-duckdb>=1.10.1",
     "duckdb>=1.5.4",
     "httpx>=0.28.1",
     "pandas>=2.2.0",

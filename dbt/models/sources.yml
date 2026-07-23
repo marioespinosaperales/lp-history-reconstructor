@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw layer loaded from Parquet by build_warehouse.
+    schema: raw
+    tables:
+      - name: pool_events
+        description: Decoded Uniswap V2/V3 pool logs (Hive partitions).
+      - name: npm_events
+        description: NonfungiblePositionManager Transfer / liquidity / Collect logs.
+      - name: nft_positions
+        description: Pool-matched positions(tokenId) snapshot with wallet + range width.

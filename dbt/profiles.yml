@@ -1,0 +1,8 @@
+lp_history:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # Override with LP_DUCKDB_PATH; default assumes dbt runs from repo root.
+      path: "{{ env_var('LP_DUCKDB_PATH', 'warehouse/lp.duckdb') }}"
+      threads: 4

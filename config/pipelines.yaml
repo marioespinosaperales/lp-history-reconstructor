@@ -1,6 +1,7 @@
 # Pipeline parameters. Overridable via LP_ env vars where noted.
 data_dir: ./data
 checkpoint_dir: ./data/checkpoints
+duckdb_path: ./warehouse/lp.duckdb
 chunk_size: 10            # Alchemy Free tier caps eth_getLogs at 10 blocks
 lookback_blocks: 500      # Phase 1 demo window; raise when on PAYG / larger quota
 confirmations: 12         # tip - confirmations is treated as final
@@ -8,3 +9,5 @@ rpc_timeout_seconds: 30
 rpc_max_retries: 5
 rpc_backoff_seconds: 1.5
 npm_verify_sample: 5
+npm_snapshot_max_calls: 200
+npm_snapshot_max_matches: 25

@@ -49,6 +49,7 @@ class NpmFile(BaseModel):
 class PipelineConfig(BaseModel):
     data_dir: Path = Path("./data")
     checkpoint_dir: Path = Path("./data/checkpoints")
+    duckdb_path: Path = Path("./warehouse/lp.duckdb")
     chunk_size: int = Field(default=2000, ge=1, le=10_000)
     lookback_blocks: int = Field(default=50_000, ge=1)
     confirmations: int = Field(default=12, ge=0)
@@ -56,12 +57,15 @@ class PipelineConfig(BaseModel):
     rpc_max_retries: int = 5
     rpc_backoff_seconds: float = 1.5
     npm_verify_sample: int = Field(default=5, ge=1, le=50)
+    npm_snapshot_max_calls: int = Field(default=200, ge=10, le=2000)
+    npm_snapshot_max_matches: int = Field(default=25, ge=1, le=500)
 
     def resolve(self, root: Path) -> PipelineConfig:
         return self.model_copy(
             update={
                 "data_dir": (root / self.data_dir).resolve(),
                 "checkpoint_dir": (root / self.checkpoint_dir).resolve(),
+                "duckdb_path": (root / self.duckdb_path).resolve(),
             }
         )
 

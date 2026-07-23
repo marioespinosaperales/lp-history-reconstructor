@@ -12,6 +12,19 @@ warehouse/
 logs/
 *.duckdb
 *.duckdb.wal
+# Sole exception: marts snapshot Evidence needs at build time
+!dashboard/sources/lp/lp_marts.duckdb
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/.user.yml
+
+# Evidence
+dashboard/node_modules/
+dashboard/.evidence/
+dashboard/build/
 
 # Secrets
 .env

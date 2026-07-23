@@ -1,0 +1,4 @@
+name: lp
+type: duckdb
+options:
+  filename: lp_marts.duckdb

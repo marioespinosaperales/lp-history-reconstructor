@@ -1,16 +1,20 @@
 # lp-history-reconstructor
 
 Reconstruct Uniswap **V3** (and V2) pool history from on-chain events
-(**event sourcing**), then prove correctness against live contract state.
+(**event sourcing**), attribute positions to wallets via NPM, then measure
+**fees / IL vs HODL by range width** in dbt.
 
 ```mermaid
 flowchart LR
     alchemy["Alchemy eth_getLogs"] --> indexer["Indexer Python"]
     indexer --> parquet["Event store Parquet Hive"]
-    parquet --> fold["Fold Mint/Burn positions"]
-    fold --> state["In-range liquidity + range width"]
-    alchemy -->|"liquidity() + slot0()"| verify["Correctness check"]
-    state --> verify
+    parquet --> fold["Fold positions + NPM wallets"]
+    fold --> verify["liquidity() / positions() checks"]
+    parquet --> snap["positions(tokenId) snapshot"]
+    snap --> duck["DuckDB raw"]
+    parquet --> duck
+    duck --> dbt["dbt marts"]
+    dbt --> evidence["Evidence dashboard"]
 ```
 
 ## What this demonstrates
@@ -19,6 +23,7 @@ flowchart LR
 - **NPM wallet attribution**: `tokenId → wallet` via ERC-721 `Transfer`, verified with `positions(tokenId)`
 - **Event sourcing**: net liquidity = fold of ordered `Mint`/`Burn` (pool) and `Increase`/`DecreaseLiquidity` (NPM)
 - **Measurable data quality**: pool `liquidity()` vs in-range fold; NPM liquidity vs `positions(tokenId)`
+- **Fees + IL vs HODL by range width**: dbt marts over DuckDB (narrow / mid / wide buckets)
 - **V2 still supported**: Sync fold + `getReserves()` (toggle `enabled` in `config/pools.yaml`)
 - **Chunked `eth_getLogs` backfill** with checkpoints (Alchemy Free = 10-block chunks)
 
@@ -29,6 +34,24 @@ uv sync
 cp .env.example .env
 # LP_ETH_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/<KEY>
 make backfill
+make transform   # NFT snapshot → DuckDB → dbt
+make snapshot    # Evidence DuckDB under dashboard/sources/lp/
+```
+
+PowerShell (no make):
+
+```powershell
+uv run python -m lp_history.run
+uv run python -m lp_history.build_warehouse
+$env:LP_DUCKDB_PATH = "warehouse/lp.duckdb"
+uv run dbt build --project-dir dbt --profiles-dir dbt
+uv run python -m lp_history.export_snapshot
+```
+
+Dashboard (local):
+
+```bash
+cd dashboard && npm install && npm run sources && npm run dev
 ```
 
 ## Default pool (enabled)
@@ -37,18 +60,22 @@ Uniswap V3 **USDC/WETH 0.05%** — `0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640`
 
 A short lookback will often report `SMOKE_OK PARTIAL` (reconstructed L < on-chain L)
 because older Mints sit outside the window. Exact `PASS` needs a longer backfill
-(or PAYG Alchemy). The pipeline and position/range math still run end-to-end.
+(or PAYG Alchemy). Marts are **directional** under short windows — Collect may include
+principal; `fees_proxy ≈ Collect − Decrease`.
 
 ## Repository layout
 
 ```
-config/          pools + pipeline params
+config/          pools + npm + pipeline params
 src/lp_history/
   rpc/           JSON-RPC client
-  index/         V2 + V3 ABI decode, chunked backfill
-  load/          Parquet + checkpoints
-  state/         V2 Sync fold + V3 position fold
-  verify/        getReserves() / liquidity() checks
+  index/         V2 + V3 + NPM ABI decode, chunked backfill
+  load/          Parquet + DuckDB loader
+  state/         folds (reserves, positions, wallets)
+  verify/        on-chain correctness checks
+  analytics/     price math + NFT snapshot for warehouse joins
+dbt/             staging → intermediate → marts (fees / IL vs HODL)
+dashboard/       Evidence report over marts snapshot
 tests/           fixtures + mocked RPC
 ```
 
@@ -60,7 +87,7 @@ make lint && make test
 
 ## Roadmap
 
-- ~~NPM events → wallet-level attribution by range width~~ (done: Transfer + positions())
-- Fees / IL / HODL benchmark in dbt + dashboard
+- ~~NPM events → wallet-level attribution by range width~~
+- ~~Fees / IL / HODL benchmark in dbt + dashboard~~
 - Full backfill from pool deployment + Dagster + live `eth_subscribe`
-- ClickHouse on a cheap VM
+- ClickHouse on a cheap VM / public Evidence deploy

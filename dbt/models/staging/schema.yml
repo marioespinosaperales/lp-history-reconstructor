@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: stg_pool_events
+    columns:
+      - name: block_number
+        tests: [not_null]
+      - name: event_name
+        tests: [not_null]
+  - name: stg_npm_events
+    columns:
+      - name: token_id
+        tests: [not_null]
+      - name: event_name
+        tests: [not_null]
+  - name: stg_nft_positions
+    columns:
+      - name: token_id
+        tests: [not_null, unique]
+      - name: range_width_ticks
+        tests: [not_null]
+      - name: range_bucket
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["narrow", "mid", "wide"]

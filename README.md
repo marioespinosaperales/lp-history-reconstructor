@@ -4,6 +4,10 @@ Reconstruct Uniswap **V3** (and V2) pool history from on-chain events
 (**event sourcing**), attribute positions to wallets via NPM, then measure
 **fees / IL vs HODL by range width** in dbt.
 
+**Dashboard:** Evidence.dev under `dashboard/` — deploy to Vercel with Root Directory
+`dashboard` (same pattern as [crypto-market-elt](https://github.com/marioespinosaperales/crypto-market-elt)).
+See `dashboard/README.md`.
+
 ```mermaid
 flowchart LR
     alchemy["Alchemy eth_getLogs"] --> indexer["Indexer Python"]
@@ -89,5 +93,6 @@ make lint && make test
 
 - ~~NPM events → wallet-level attribution by range width~~
 - ~~Fees / IL / HODL benchmark in dbt + dashboard~~
+- Public Evidence deploy on Vercel + optional scheduled snapshot refresh
 - Full backfill from pool deployment + Dagster + live `eth_subscribe`
-- ClickHouse on a cheap VM / public Evidence deploy
+- ClickHouse on a cheap VM

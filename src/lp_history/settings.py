@@ -27,10 +27,23 @@ class PoolConfig(BaseModel):
     token1_symbol: str
     token0_decimals: int = Field(ge=0, le=18)
     token1_decimals: int = Field(ge=0, le=18)
+    # Canonical mainnet addresses for filtering NPM positions to this pool
+    token0_address: str | None = None
+    token1_address: str | None = None
+
+
+class NpmConfig(BaseModel):
+    name: str = "uniswap_v3_npm"
+    address: str = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
+    enabled: bool = True
 
 
 class PoolsFile(BaseModel):
     pools: list[PoolConfig] = Field(min_length=1)
+
+
+class NpmFile(BaseModel):
+    npm: NpmConfig
 
 
 class PipelineConfig(BaseModel):
@@ -42,6 +55,7 @@ class PipelineConfig(BaseModel):
     rpc_timeout_seconds: float = 30.0
     rpc_max_retries: int = 5
     rpc_backoff_seconds: float = 1.5
+    npm_verify_sample: int = Field(default=5, ge=1, le=50)
 
     def resolve(self, root: Path) -> PipelineConfig:
         return self.model_copy(
@@ -62,6 +76,7 @@ class Secrets(BaseSettings):
 
 class Settings(BaseModel):
     pools: list[PoolConfig]
+    npm: NpmConfig
     pipeline: PipelineConfig
     secrets: Secrets
 
@@ -75,9 +90,12 @@ def _load_yaml(path: Path) -> dict:
 def get_settings(config_dir: Path | None = None) -> Settings:
     config_dir = config_dir or CONFIG_DIR
     pools = PoolsFile.model_validate(_load_yaml(config_dir / "pools.yaml")).pools
+    npm_raw = _load_yaml(config_dir / "npm.yaml")
+    npm = NpmFile.model_validate(npm_raw).npm if npm_raw else NpmConfig(enabled=False)
     pipeline = PipelineConfig.model_validate(_load_yaml(config_dir / "pipelines.yaml"))
     return Settings(
         pools=pools,
+        npm=npm,
         pipeline=pipeline.resolve(PROJECT_ROOT),
         secrets=Secrets(),
     )

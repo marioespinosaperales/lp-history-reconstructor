@@ -7,3 +7,4 @@ confirmations: 12         # tip - confirmations is treated as final
 rpc_timeout_seconds: 30
 rpc_max_retries: 5
 rpc_backoff_seconds: 1.5
+npm_verify_sample: 5

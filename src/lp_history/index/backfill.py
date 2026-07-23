@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def resolve_range(
     rpc: RpcClient,
     pipeline: PipelineConfig,
-    pool: PoolConfig,
+    address: str,
     checkpoint_dir: Path,
 ) -> tuple[int, int]:
     """Return (from_block, to_block_inclusive) for this run."""
@@ -29,7 +29,7 @@ def resolve_range(
     if to_block < 0:
         raise RuntimeError("Chain tip is below confirmation depth")
 
-    checkpoint = load_checkpoint(checkpoint_dir, pool.address)
+    checkpoint = load_checkpoint(checkpoint_dir, address)
     if checkpoint is not None:
         from_block = checkpoint + 1
     else:
@@ -45,7 +45,7 @@ def backfill_pool(
 ) -> dict[str, int]:
     """Index events for one pool over the resolved window. Returns stats."""
     address = to_checksum_address(pool.address)
-    from_block, to_block = resolve_range(rpc, pipeline, pool, pipeline.checkpoint_dir)
+    from_block, to_block = resolve_range(rpc, pipeline, address, pipeline.checkpoint_dir)
 
     if from_block > to_block:
         logger.info(

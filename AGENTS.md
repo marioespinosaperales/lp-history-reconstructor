@@ -1,15 +1,15 @@
 # lp-history-reconstructor — Project conventions
 
-Reconstruct Uniswap V2 pool history from on-chain events (event sourcing),
-verify reconstructed reserves against `getReserves()`.
+Reconstruct Uniswap V2/V3 LP history from on-chain events (event sourcing),
+attribute V3 positions to wallets via NPM, and verify against live contract state.
 
 ## Architecture
 
 - `src/lp_history/rpc/` — JSON-RPC client (Alchemy): getLogs, blockNumber, eth_call
-- `src/lp_history/index/` — V2 + V3 ABI decode, chunked backfill
-- `src/lp_history/state/` — V2 Sync fold + V3 position fold (range width)
-- `src/lp_history/verify/` — getReserves() / liquidity()+slot0() checks
-- `config/` — pools + pipeline params; secrets ONLY via `LP_` env vars
+- `src/lp_history/index/` — V2 + V3 + NPM ABI decode, chunked backfill
+- `src/lp_history/state/` — V2 Sync fold, V3 position fold (range width), NPM tokenId→wallet
+- `src/lp_history/verify/` — getReserves() / liquidity()+slot0() / positions(tokenId)
+- `config/` — pools + npm + pipeline params; secrets ONLY via `LP_` env vars
 
 ## Rules
 

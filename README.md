@@ -15,9 +15,10 @@ flowchart LR
 
 ## What this demonstrates
 
-- **V3 concentrated liquidity**: positions keyed by `(owner, tickLower, tickUpper)` with **range width** (`tickUpper - tickLower`) — the foundation for “narrow vs wide LP” PnL
-- **Event sourcing**: net liquidity = fold of ordered `Mint` (+) / `Burn` (−)
-- **Measurable data quality**: reconstructed in-range `L` vs on-chain `pool.liquidity()` at `slot0.tick`
+- **V3 concentrated liquidity**: positions keyed by `(owner, tickLower, tickUpper)` with **range width**
+- **NPM wallet attribution**: `tokenId → wallet` via ERC-721 `Transfer`, verified with `positions(tokenId)`
+- **Event sourcing**: net liquidity = fold of ordered `Mint`/`Burn` (pool) and `Increase`/`DecreaseLiquidity` (NPM)
+- **Measurable data quality**: pool `liquidity()` vs in-range fold; NPM liquidity vs `positions(tokenId)`
 - **V2 still supported**: Sync fold + `getReserves()` (toggle `enabled` in `config/pools.yaml`)
 - **Chunked `eth_getLogs` backfill** with checkpoints (Alchemy Free = 10-block chunks)
 
@@ -59,7 +60,7 @@ make lint && make test
 
 ## Roadmap
 
-- NPM (`NonfungiblePositionManager`) events → **wallet-level** PnL by range width
+- ~~NPM events → wallet-level attribution by range width~~ (done: Transfer + positions())
 - Fees / IL / HODL benchmark in dbt + dashboard
 - Full backfill from pool deployment + Dagster + live `eth_subscribe`
 - ClickHouse on a cheap VM

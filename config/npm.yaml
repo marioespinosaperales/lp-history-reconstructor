@@ -1,0 +1,5 @@
+# NonfungiblePositionManager (Uniswap V3). Secrets NEVER go here.
+npm:
+  name: uniswap_v3_npm
+  address: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
+  enabled: true

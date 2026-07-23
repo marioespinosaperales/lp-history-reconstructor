@@ -21,6 +21,8 @@ class PoolConfig(BaseModel):
     name: str
     address: str
     protocol: str = "uniswap_v2"
+    enabled: bool = True
+    fee_tier: int | None = None
     token0_symbol: str
     token1_symbol: str
     token0_decimals: int = Field(ge=0, le=18)

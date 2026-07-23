@@ -114,6 +114,7 @@ def decode_log(raw: dict[str, Any], pool_address: str) -> dict[str, Any] | None:
 
     row: dict[str, Any] = {
         "pool_address": to_checksum_address(pool_address),
+        "protocol": "uniswap_v2",
         "event_name": name,
         "block_number": int(raw["blockNumber"], 16),
         "log_index": int(raw["logIndex"], 16),
@@ -128,6 +129,13 @@ def decode_log(raw: dict[str, Any], pool_address: str) -> dict[str, Any] | None:
         "amount1": None,
         "sender": values.get("sender"),
         "to_address": values.get("to"),
+        "owner": None,
+        "tick_lower": None,
+        "tick_upper": None,
+        "liquidity": None,
+        "sqrt_price_x96": None,
+        "tick": None,
+        "recipient": None,
     }
 
     if name == "Sync":

@@ -6,10 +6,9 @@ verify reconstructed reserves against `getReserves()`.
 ## Architecture
 
 - `src/lp_history/rpc/` — JSON-RPC client (Alchemy): getLogs, blockNumber, eth_call
-- `src/lp_history/index/` — decode V2 Swap/Mint/Burn/Sync, chunked backfill
-- `src/lp_history/load/` — Hive-partitioned Parquet event store + checkpoints
-- `src/lp_history/state/` — fold Sync events into reconstructed reserves
-- `src/lp_history/verify/` — compare reconstructed vs on-chain getReserves()
+- `src/lp_history/index/` — V2 + V3 ABI decode, chunked backfill
+- `src/lp_history/state/` — V2 Sync fold + V3 position fold (range width)
+- `src/lp_history/verify/` — getReserves() / liquidity()+slot0() checks
 - `config/` — pools + pipeline params; secrets ONLY via `LP_` env vars
 
 ## Rules

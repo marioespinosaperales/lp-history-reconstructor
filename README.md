@@ -1,77 +1,65 @@
 # lp-history-reconstructor
 
-Reconstruct Uniswap V2 pool history from on-chain events (**event sourcing**),
-then prove correctness by comparing reconstructed reserves against
-`getReserves()` at control blocks.
+Reconstruct Uniswap **V3** (and V2) pool history from on-chain events
+(**event sourcing**), then prove correctness against live contract state.
 
 ```mermaid
 flowchart LR
     alchemy["Alchemy eth_getLogs"] --> indexer["Indexer Python"]
     indexer --> parquet["Event store Parquet Hive"]
-    parquet --> fold["Fold Sync events"]
-    fold --> state["Reconstructed reserves"]
-    alchemy -->|"getReserves at Sync block"| verify["Correctness check"]
+    parquet --> fold["Fold Mint/Burn positions"]
+    fold --> state["In-range liquidity + range width"]
+    alchemy -->|"liquidity() + slot0()"| verify["Correctness check"]
     state --> verify
 ```
 
 ## What this demonstrates
 
-- **Event sourcing for DeFi state**: pool reserves at any block = fold of ordered `Sync` events
-- **Chunked `eth_getLogs` backfill** with checkpoints (resume-safe, rate-limit friendly)
-- **Measurable data quality**: reconstructed `(reserve0, reserve1)` must match on-chain exactly
-- **Config-driven pools**: add a pool address in `config/pools.yaml`, no code change
-
-Phase 1 scopes a recent block window (`lookback_blocks`) so the pipeline is
-demoable on Alchemy's free tier. **Free-tier Alchemy caps `eth_getLogs` at a
-10-block range**, so `chunk_size` defaults to 10. Raising the lookback (or moving
-to PAYG) is a config change — checkpoints make resume safe.
+- **V3 concentrated liquidity**: positions keyed by `(owner, tickLower, tickUpper)` with **range width** (`tickUpper - tickLower`) — the foundation for “narrow vs wide LP” PnL
+- **Event sourcing**: net liquidity = fold of ordered `Mint` (+) / `Burn` (−)
+- **Measurable data quality**: reconstructed in-range `L` vs on-chain `pool.liquidity()` at `slot0.tick`
+- **V2 still supported**: Sync fold + `getReserves()` (toggle `enabled` in `config/pools.yaml`)
+- **Chunked `eth_getLogs` backfill** with checkpoints (Alchemy Free = 10-block chunks)
 
 ## Quickstart
 
 ```bash
-# 1. install
 uv sync
-
-# 2. configure Alchemy (Ethereum Mainnet HTTPS URL)
 cp .env.example .env
-# edit .env → LP_ETH_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/<KEY>
-
-# 3. backfill + verify
+# LP_ETH_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/<KEY>
 make backfill
 ```
 
-No paid APIs beyond Alchemy's free tier.
+## Default pool (enabled)
 
-## Default pool
+Uniswap V3 **USDC/WETH 0.05%** — `0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640`
 
-Uniswap V2 **WETH/USDC** — `0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc`
-(token0=USDC 6dp, token1=WETH 18dp).
+A short lookback will often report `SMOKE_OK PARTIAL` (reconstructed L < on-chain L)
+because older Mints sit outside the window. Exact `PASS` needs a longer backfill
+(or PAYG Alchemy). The pipeline and position/range math still run end-to-end.
 
 ## Repository layout
 
 ```
-config/          pools + pipeline params (YAML, validated by pydantic)
-schemas/         raw event contract
+config/          pools + pipeline params
 src/lp_history/
-  rpc/           JSON-RPC client (retries + backoff)
-  index/         V2 ABI decode + chunked backfill
-  load/          Parquet event store + checkpoints
-  state/         fold Sync → reserves
-  verify/        getReserves() comparison
+  rpc/           JSON-RPC client
+  index/         V2 + V3 ABI decode, chunked backfill
+  load/          Parquet + checkpoints
+  state/         V2 Sync fold + V3 position fold
+  verify/        getReserves() / liquidity() checks
 tests/           fixtures + mocked RPC
 ```
 
 ## Development
 
 ```bash
-make lint
-make test
+make lint && make test
 ```
 
-## Roadmap (later phases)
+## Roadmap
 
-- Full backfill from pool deployment block
-- Dagster partitioned backfill job
-- Live tail via `eth_subscribe`
-- dbt metrics (TVL, fees, impermanent loss, LP PnL) + dashboard
-- ClickHouse + docker-compose on a cheap VM
+- NPM (`NonfungiblePositionManager`) events → **wallet-level** PnL by range width
+- Fees / IL / HODL benchmark in dbt + dashboard
+- Full backfill from pool deployment + Dagster + live `eth_subscribe`
+- ClickHouse on a cheap VM

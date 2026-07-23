@@ -1,9 +1,21 @@
-# Uniswap V2 pools to index. Secrets NEVER go here.
+# Pools to index. Secrets NEVER go here.
+# Alchemy Free caps eth_getLogs at 10 blocks — enable one pool at a time for smoke runs.
 pools:
-  - name: weth_usdc
+  - name: usdc_weth_v3_005
+    address: "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"
+    protocol: uniswap_v3
+    enabled: true
+    # Uniswap V3 USDC/WETH 0.05% (fee = 500)
+    fee_tier: 500
+    token0_symbol: USDC
+    token1_symbol: WETH
+    token0_decimals: 6
+    token1_decimals: 18
+
+  - name: weth_usdc_v2
     address: "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
     protocol: uniswap_v2
-    # token0 = USDC (6 decimals), token1 = WETH (18 decimals)
+    enabled: false
     token0_symbol: USDC
     token1_symbol: WETH
     token0_decimals: 6

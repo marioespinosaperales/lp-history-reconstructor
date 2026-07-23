@@ -1,4 +1,4 @@
-"""Chunked Uniswap V2 event backfill via eth_getLogs."""
+"""Chunked pool event backfill via eth_getLogs (V2 + V3)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 from eth_utils import to_checksum_address
 
-from lp_history.index.abi import decode_log, topic0_set
+from lp_history.index.decode import decode_log, topic0_set
 from lp_history.load.checkpoint import load_checkpoint, save_checkpoint
 from lp_history.load.parquet import write_events
 from lp_history.rpc.client import RpcClient
@@ -53,18 +53,15 @@ def backfill_pool(
         )
         return {"events": 0, "from_block": from_block, "to_block": to_block, "chunks": 0}
 
-    topics = topic0_set()
-    # Filter by any of the four event topic0s: OR by listing them in position 0
-    # is not valid JSON-RPC; we omit topics and filter after decode, OR pass
-    # each topic in separate calls. One call without topic filter is simpler
-    # and fine for a single pool address.
+    topics = {t.lower() for t in topic0_set(pool.protocol)}
     total_events = 0
     chunks = 0
     cursor = from_block
 
     logger.info(
-        "Backfilling %s (%s) blocks %d..%d (chunk=%d)",
+        "Backfilling %s [%s] (%s) blocks %d..%d (chunk=%d)",
         pool.name,
+        pool.protocol,
         address,
         from_block,
         to_block,
@@ -76,11 +73,10 @@ def backfill_pool(
         raw_logs = rpc.get_logs(address=address, from_block=cursor, to_block=end)
         rows = []
         for raw in raw_logs:
-            # Only keep known V2 events (topic0 filter)
             topic0 = (raw.get("topics") or [None])[0]
-            if topic0 is None or topic0.lower() not in {t.lower() for t in topics}:
+            if topic0 is None or topic0.lower() not in topics:
                 continue
-            decoded = decode_log(raw, address)
+            decoded = decode_log(raw, address, pool.protocol)
             if decoded is not None:
                 rows.append(decoded)
 
@@ -101,4 +97,5 @@ def backfill_pool(
         "from_block": from_block,
         "to_block": to_block,
         "chunks": chunks,
+        "protocol": pool.protocol,
     }

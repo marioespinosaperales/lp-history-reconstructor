@@ -16,10 +16,16 @@ def sync_logs() -> list[dict]:
 
 
 @pytest.fixture
+def v3_mint_logs() -> list[dict]:
+    return json.loads((FIXTURES / "v3_mint_logs.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture
 def pool() -> PoolConfig:
     return PoolConfig(
         name="weth_usdc",
         address=POOL,
+        protocol="uniswap_v2",
         token0_symbol="USDC",
         token1_symbol="WETH",
         token0_decimals=6,

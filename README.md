@@ -5,10 +5,10 @@ Reconstruct Uniswap **V3** (and V2) pool history from on-chain events
 **fees / IL vs HODL by range width** in dbt.
 
 **Live dashboard:** [lp-history-reconstructor on Vercel](https://lp-history-reconstructor.vercel.app/)
-(Evidence.dev). If Vercel asks for a login, disable **Deployment Protection** on the project.
+(Evidence.dev, refreshed hourly by GitHub Actions onto the `data` branch).
+If Vercel asks for a login, disable **Deployment Protection** on the project.
 
-**Dashboard:** Evidence under `dashboard/` — Root Directory `dashboard` (same pattern as
-[crypto-market-elt](https://github.com/marioespinosaperales/crypto-market-elt)).
+**Dashboard:** Evidence under `dashboard/` — repo-root `vercel.json` builds that folder.
 See `dashboard/README.md`.
 
 ```mermaid
@@ -65,10 +65,17 @@ cd dashboard && npm install && npm run sources && npm run dev
 
 Uniswap V3 **USDC/WETH 0.05%** — `0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640`
 
-A short lookback will often report `SMOKE_OK PARTIAL` (reconstructed L < on-chain L)
-because older Mints sit outside the window. Exact `PASS` needs a longer backfill
-(or PAYG Alchemy). Marts are **directional** under short windows — Collect may include
+A lookback of **2500 blocks** (~8–10h) usually captures Collect/Decrease cycles for
+fees and PnL-vs-HODL marts. Exact pool `liquidity()` match still needs a longer
+backfill (or PAYG Alchemy). Marts are **directional** — Collect may include
 principal; `fees_proxy ≈ Collect − Decrease`.
+
+## Hourly refresh
+
+GitHub Actions (`.github/workflows/refresh.yml`) runs the pipeline hourly and
+force-pushes `dashboard/sources/lp/lp_marts.duckdb` to the `data` branch, then
+hits a Vercel deploy hook. Required secrets: `LP_ETH_RPC_URL`,
+`VERCEL_DEPLOY_HOOK_URL` (optional: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`).
 
 ## Repository layout
 
@@ -97,6 +104,6 @@ make lint && make test
 - ~~NPM events → wallet-level attribution by range width~~
 - ~~Fees / IL / HODL benchmark in dbt + dashboard~~
 - ~~Public Evidence deploy on Vercel~~
-- Optional scheduled snapshot refresh (GitHub Actions + deploy hook)
+- ~~Scheduled snapshot refresh (GitHub Actions + deploy hook)~~
 - Full backfill from pool deployment + Dagster + live `eth_subscribe`
 - ClickHouse on a cheap VM

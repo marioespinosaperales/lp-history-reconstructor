@@ -54,6 +54,13 @@ NPM_ABI: list[dict[str, Any]] = [
     },
     {
         "inputs": [{"name": "tokenId", "type": "uint256"}],
+        "name": "ownerOf",
+        "outputs": [{"name": "owner", "type": "address"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [{"name": "tokenId", "type": "uint256"}],
         "name": "positions",
         "outputs": [
             {"name": "nonce", "type": "uint96"},
@@ -81,6 +88,7 @@ for _item in NPM_ABI:
         _EVENT_BY_TOPIC[topic.lower()] = _item
 
 POSITIONS_SELECTOR = Web3.keccak(text="positions(uint256)")[:4]
+OWNER_OF_SELECTOR = Web3.keccak(text="ownerOf(uint256)")[:4]
 
 
 def topic0_set() -> list[str]:
@@ -165,6 +173,16 @@ def decode_log(raw: dict[str, Any], npm_address: str) -> dict[str, Any] | None:
 
 def positions_calldata(token_id: int) -> str:
     return "0x" + (bytes(POSITIONS_SELECTOR) + encode(["uint256"], [token_id])).hex()
+
+
+def owner_of_calldata(token_id: int) -> str:
+    return "0x" + (bytes(OWNER_OF_SELECTOR) + encode(["uint256"], [token_id])).hex()
+
+
+def decode_owner_of(result_hex: str) -> str:
+    raw = bytes.fromhex(result_hex[2:] if result_hex.startswith("0x") else result_hex)
+    (owner,) = decode(["address"], raw)
+    return to_checksum_address(owner)
 
 
 def decode_positions(result_hex: str) -> dict[str, Any]:

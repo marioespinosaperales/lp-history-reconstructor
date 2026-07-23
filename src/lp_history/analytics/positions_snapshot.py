@@ -1,8 +1,7 @@
 """Write pool-matched NFT positions (wallet + range width) for dbt joins.
 
 NPM events alone do not carry tickLower/tickUpper; those come from
-``positions(tokenId)``. This snapshot is enrichment for the warehouse, not a
-business-metric fold.
+``positions(tokenId)``. Missing Transfer history is filled via ``ownerOf``.
 """
 
 from __future__ import annotations
@@ -13,13 +12,41 @@ from pathlib import Path
 import pandas as pd
 from eth_utils import to_checksum_address
 
-from lp_history.analytics.price import range_bucket
-from lp_history.index.npm_abi import decode_positions, positions_calldata
+from lp_history.analytics.price import is_full_range, range_bucket, range_width_pct
+from lp_history.index.npm_abi import (
+    decode_owner_of,
+    decode_positions,
+    owner_of_calldata,
+    positions_calldata,
+)
 from lp_history.rpc.client import RpcClient
 from lp_history.settings import PoolConfig
 from lp_history.state.npm_wallets import load_npm_events, wallet_by_token_id
 
 logger = logging.getLogger(__name__)
+
+SNAPSHOT_COLUMNS = [
+    "pool_name",
+    "pool_address",
+    "npm_address",
+    "token_id",
+    "wallet",
+    "wallet_source",
+    "tick_lower",
+    "tick_upper",
+    "range_width_ticks",
+    "range_width_pct",
+    "is_full_range",
+    "range_bucket",
+    "fee_tier",
+    "liquidity",
+    "token0",
+    "token1",
+    "token0_decimals",
+    "token1_decimals",
+    "token0_symbol",
+    "token1_symbol",
+]
 
 
 def _matches_pool(on_chain: dict, pool: PoolConfig) -> bool:
@@ -49,9 +76,26 @@ def candidate_token_ids(events: pd.DataFrame) -> list[int]:
         elif row["event_name"] == "DecreaseLiquidity":
             boost = 4
         else:
-            boost = 1  # Collect — many NFTs are other pools
+            boost = 1
         scored[tid] = scored.get(tid, 0) + boost
     return sorted(scored, key=lambda t: (scored[t], t), reverse=True)
+
+
+def resolve_wallet(
+    rpc: RpcClient,
+    npm: str,
+    token_id: int,
+    transfer_owners: dict[int, str],
+) -> tuple[str | None, str]:
+    """Prefer Transfer-fold wallet; else eth_call ownerOf(tokenId)."""
+    if token_id in transfer_owners:
+        return transfer_owners[token_id], "transfer"
+    try:
+        raw = rpc.eth_call(to=npm, data=owner_of_calldata(token_id))
+        return decode_owner_of(raw), "owner_of"
+    except Exception as exc:  # noqa: BLE001 — burned NFTs revert
+        logger.debug("ownerOf(%s) failed: %s", token_id, exc)
+        return None, "missing"
 
 
 def build_nft_positions_frame(
@@ -81,17 +125,24 @@ def build_nft_positions_frame(
             continue
         if not _matches_pool(on_chain, pool):
             continue
+
         width = on_chain["tick_upper"] - on_chain["tick_lower"]
+        full = is_full_range(width, on_chain["tick_lower"], on_chain["tick_upper"])
+        wallet, wallet_source = resolve_wallet(rpc, npm, token_id, owners)
+
         rows.append(
             {
                 "pool_name": pool.name,
                 "pool_address": to_checksum_address(pool.address),
                 "npm_address": npm,
                 "token_id": token_id,
-                "wallet": owners.get(token_id),
+                "wallet": wallet,
+                "wallet_source": wallet_source,
                 "tick_lower": on_chain["tick_lower"],
                 "tick_upper": on_chain["tick_upper"],
                 "range_width_ticks": width,
+                "range_width_pct": None if full else range_width_pct(width),
+                "is_full_range": full,
                 "range_bucket": range_bucket(width),
                 "fee_tier": on_chain["fee"],
                 "liquidity": on_chain["liquidity"],
@@ -136,29 +187,7 @@ def write_nft_positions_snapshot(
     path = out_dir / "positions.parquet"
     if frame.empty:
         logger.warning("No pool-matched NFT positions for %s", pool.name)
-        # Still write empty schema-friendly file for DuckDB globs
-        empty = pd.DataFrame(
-            columns=[
-                "pool_name",
-                "pool_address",
-                "npm_address",
-                "token_id",
-                "wallet",
-                "tick_lower",
-                "tick_upper",
-                "range_width_ticks",
-                "range_bucket",
-                "fee_tier",
-                "liquidity",
-                "token0",
-                "token1",
-                "token0_decimals",
-                "token1_decimals",
-                "token0_symbol",
-                "token1_symbol",
-            ]
-        )
-        empty.to_parquet(path, index=False)
+        pd.DataFrame(columns=SNAPSHOT_COLUMNS).to_parquet(path, index=False)
         return path
 
     frame.to_parquet(path, index=False)

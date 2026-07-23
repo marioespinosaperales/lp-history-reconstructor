@@ -23,4 +23,4 @@ models:
         tests:
           - accepted_values:
               arguments:
-                values: ["narrow", "mid", "wide"]
+                values: ["narrow", "mid", "wide", "full"]

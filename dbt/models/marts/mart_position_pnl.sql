@@ -1,4 +1,4 @@
--- Per-position window PnL vs HODL (token0 units). Lookbacks are approximate.
+-- Per-position window metrics: fees % always; IL % only on clear exits.
 with flows as (
     select * from {{ ref('int_token_cashflows') }}
     where value_token0 is not null
@@ -48,8 +48,10 @@ marked as (
         p.token0_decimals,
         p.token1_decimals,
         try_cast(p.liquidity as double) as on_chain_liquidity,
-        p.tick_lower,
-        p.tick_upper
+        coalesce(p.is_full_range, false) as is_full_range,
+        p.range_width_pct as snapshot_range_width_pct,
+        p.wallet_source,
+        coalesce(a.wallet, p.wallet) as wallet_resolved
     from agg a
     left join exit_px e
         on a.token_id = e.token_id and e.rn = 1
@@ -62,18 +64,23 @@ scored as (
         token_id,
         pool_name,
         pool_address,
-        wallet,
+        wallet_resolved as wallet,
+        wallet_source,
         range_width_ticks,
-        -- Uniswap tick geometry: price(i)=1.0001^i → full band width as fraction
-        power(1.0001, range_width_ticks) - 1.0 as range_width_pct,
-        range_bucket,
+        is_full_range,
+        case
+            when is_full_range then null
+            when snapshot_range_width_pct is not null then snapshot_range_width_pct
+            when range_width_ticks is null then null
+            when range_width_ticks >= 1000000 then null
+            else power(1.0001, range_width_ticks) - 1.0
+        end as range_width_pct,
+        case when is_full_range then 'full' else range_bucket end as range_bucket,
         token0_symbol,
         deposited_token0,
         withdrawn_token0,
         collected_token0,
         on_chain_liquidity,
-        -- Collect = fees + any principal already owed; without Decrease in-window
-        -- this overstates "pure fees". With Decrease: collect - decrease ≈ fees.
         greatest(collected_token0 - withdrawn_token0, 0) as fees_proxy_token0,
         case
             when exit_token0_per_token1 is null or deposited_token0 = 0 then null
@@ -82,18 +89,14 @@ scored as (
                 + (deposited_amount1_raw / power(10.0, token1_decimals))
                 * exit_token0_per_token1
         end as hodl_token0,
-        case
-            when exit_token0_per_token1 is null
-                or deposited_token0 = 0
-                or collected_token0 = 0 then null
-            else
-                collected_token0
-                - (
-                    (deposited_amount0_raw / power(10.0, token0_decimals))
-                    + (deposited_amount1_raw / power(10.0, token1_decimals))
-                    * exit_token0_per_token1
-                )
-        end as pnl_vs_hodl_token0,
+        -- Clear exit: liquidity gone on-chain, or ≥85% of deposit withdrawn in-window
+        (
+            deposited_token0 > 0
+            and (
+                coalesce(on_chain_liquidity, 0) = 0
+                or withdrawn_token0 >= 0.85 * deposited_token0
+            )
+        ) as is_clear_exit,
         first_block,
         last_block,
         flow_events,
@@ -107,16 +110,47 @@ scored as (
 )
 
 select
-    *,
-    -- Relative returns (strategy quality): prefer high % on small capital
+    token_id,
+    pool_name,
+    pool_address,
+    wallet,
+    wallet_source,
+    range_width_ticks,
+    range_width_pct,
+    is_full_range,
+    range_bucket,
+    token0_symbol,
+    deposited_token0,
+    withdrawn_token0,
+    collected_token0,
+    on_chain_liquidity,
+    fees_proxy_token0,
+    hodl_token0,
+    is_clear_exit,
+    -- IL ≈ principal returned vs HODL bag (fees excluded); only on clear exits
+    case
+        when is_clear_exit and hodl_token0 > 0
+            then withdrawn_token0 - hodl_token0
+        else null
+    end as il_vs_hodl_token0,
+    case
+        when is_clear_exit and hodl_token0 > 0
+            then (withdrawn_token0 - hodl_token0) / hodl_token0
+        else null
+    end as il_vs_hodl_pct,
     case
         when deposited_token0 > 0 and fees_proxy_token0 > 0
             then fees_proxy_token0 / deposited_token0
         else null
     end as fees_on_deposit_pct,
+    -- Net after clear exit: principal IL + fees, as % of HODL
     case
-        when hodl_token0 > 0 and pnl_vs_hodl_token0 is not null
-            then pnl_vs_hodl_token0 / hodl_token0
+        when is_clear_exit and hodl_token0 > 0
+            then (withdrawn_token0 + fees_proxy_token0 - hodl_token0) / hodl_token0
         else null
-    end as pnl_vs_hodl_pct
+    end as net_vs_hodl_pct,
+    first_block,
+    last_block,
+    flow_events,
+    cycle_kind
 from scored

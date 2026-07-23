@@ -3,9 +3,10 @@ version: 2
 models:
   - name: mart_position_pnl
     description: >
-      Per-NFT window cashflows valued in token0. fees_proxy ≈ Collect − Decrease.
-      pnl_vs_hodl compares Collect proceeds to holding the deposited bag at exit price.
-      Short Alchemy lookbacks under-count history — treat as directional, not audit-grade.
+      Per-NFT window metrics in token0. fees_on_deposit_pct is always available when
+      both fees and deposit exist. il_vs_hodl_* and net_vs_hodl_pct only populate on
+      clear exits (liquidity gone or ≥85% withdrawn in-window). Full-range positions
+      use range_bucket=full with null range_width_pct.
     columns:
       - name: token_id
         tests: [not_null, unique]
@@ -13,15 +14,15 @@ models:
         tests:
           - accepted_values:
               arguments:
-                values: ["narrow", "mid", "wide"]
+                values: ["narrow", "mid", "wide", "full"]
   - name: mart_pnl_by_range_width
-    description: Narrow vs mid vs wide LP aggregates — the portfolio headline metric.
+    description: Narrow / mid / wide / full aggregates — fees % and IL % (clear exits).
     columns:
       - name: range_bucket
         tests:
           - accepted_values:
               arguments:
-                values: ["narrow", "mid", "wide"]
+                values: ["narrow", "mid", "wide", "full"]
   - name: mart_pool_activity
     description: Indexed-window pool activity counts for dashboard context.
     columns:

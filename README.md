@@ -4,8 +4,11 @@ Reconstruct Uniswap **V3** (and V2) pool history from on-chain events
 (**event sourcing**), attribute positions to wallets via NPM, then measure
 **fees / IL vs HODL by range width** in dbt.
 
-**Dashboard:** Evidence.dev under `dashboard/` — deploy to Vercel with Root Directory
-`dashboard` (same pattern as [crypto-market-elt](https://github.com/marioespinosaperales/crypto-market-elt)).
+**Live dashboard:** [lp-history-reconstructor on Vercel](https://lp-history-reconstructor.vercel.app/)
+(Evidence.dev). If Vercel asks for a login, disable **Deployment Protection** on the project.
+
+**Dashboard:** Evidence under `dashboard/` — Root Directory `dashboard` (same pattern as
+[crypto-market-elt](https://github.com/marioespinosaperales/crypto-market-elt)).
 See `dashboard/README.md`.
 
 ```mermaid
@@ -93,6 +96,7 @@ make lint && make test
 
 - ~~NPM events → wallet-level attribution by range width~~
 - ~~Fees / IL / HODL benchmark in dbt + dashboard~~
-- Public Evidence deploy on Vercel + optional scheduled snapshot refresh
+- ~~Public Evidence deploy on Vercel~~
+- Optional scheduled snapshot refresh (GitHub Actions + deploy hook)
 - Full backfill from pool deployment + Dagster + live `eth_subscribe`
 - ClickHouse on a cheap VM

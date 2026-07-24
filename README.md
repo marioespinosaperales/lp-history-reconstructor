@@ -1,8 +1,10 @@
 # lp-history-reconstructor
 
 Reconstruct Uniswap **V3** (and V2) pool history from on-chain events
-(**event sourcing**), attribute positions to wallets via NPM, then measure
-**fees / IL vs HODL by range width** in dbt.
+(**event sourcing**), attribute positions to wallets via NPM, **score
+reconstruction against live contract calls**, then measure
+**fees / IL vs HODL by range width** in dbt. Runnable locally with `uv` or in
+**Docker**.
 
 **Live dashboard:** [lp-history-reconstructor on Vercel](https://lp-history-reconstructor.vercel.app/)
 (Evidence.dev, refreshed hourly by GitHub Actions onto the `data` branch).
@@ -17,22 +19,39 @@ flowchart LR
     indexer --> parquet["Event store Parquet Hive"]
     parquet --> fold["Fold positions + NPM wallets"]
     fold --> verify["liquidity() / positions() checks"]
+    verify --> eval["QC scorecard"]
     parquet --> snap["positions(tokenId) snapshot"]
     snap --> duck["DuckDB raw"]
     parquet --> duck
     duck --> dbt["dbt marts"]
     dbt --> evidence["Evidence dashboard"]
+    dbt --> eval
 ```
+
+## Research / QC framing
+
+This repo is the **ground-truth eval** piece of the portfolio: reconstruct state from
+an event stream, score it against on-chain truth, and document when metrics are only
+directional (lookback / clear-exit caveats).
+
+| Concern | How this repo answers it |
+|---|---|
+| Realistic task | Event-sourced LP history + NFT wallet attribution |
+| Reliable rubric | Exact / PARTIAL / SMOKE_OK vs `getReserves()` / `liquidity()` / `positions()` |
+| Controlled comparison | Fees and IL vs HODL by range-width buckets |
+| Validation loop | Live verify + mart sanity → `artifacts/qc_scorecard.md` with explicit caveats |
+
+Sibling stories: [crypto-market-elt](https://github.com/marioespinosaperales/crypto-market-elt) (ingestion contracts) and [dex-trades-canonical](https://github.com/marioespinosaperales/dex-trades-canonical) (labeling rubric).
 
 ## What this demonstrates
 
+- **Ground-truth QC**: pool `liquidity()` vs in-range fold; NPM liquidity vs `positions(tokenId)`; V2 `getReserves()`
+- **Eval scorecard**: exact vs partial/smoke rates, clear-exit coverage, range-bucket counts, lookback caveats
 - **V3 concentrated liquidity**: positions keyed by `(owner, tickLower, tickUpper)` with **range width**
-- **NPM wallet attribution**: `tokenId → wallet` via ERC-721 `Transfer`, verified with `positions(tokenId)`
-- **Event sourcing**: net liquidity = fold of ordered `Mint`/`Burn` (pool) and `Increase`/`DecreaseLiquidity` (NPM)
-- **Measurable data quality**: pool `liquidity()` vs in-range fold; NPM liquidity vs `positions(tokenId)`
-- **Fees + IL vs HODL by range width**: dbt marts over DuckDB (narrow / mid / wide buckets)
-- **V2 still supported**: Sync fold + `getReserves()` (toggle `enabled` in `config/pools.yaml`)
-- **Chunked `eth_getLogs` backfill** with checkpoints (Alchemy Free = 10-block chunks)
+- **NPM wallet attribution**: `tokenId → wallet` via ERC-721 `Transfer`
+- **Event sourcing**: net liquidity = fold of ordered Mint/Burn and Increase/DecreaseLiquidity
+- **Fees + IL vs HODL by range width**: dbt marts (narrow / mid / wide / full) with clear-exit gating
+- **Docker + Linux pipeline**: chunked `eth_getLogs` backfill with checkpoints
 
 ## Quickstart
 
@@ -43,6 +62,21 @@ cp .env.example .env
 make backfill
 make transform   # NFT snapshot → DuckDB → dbt
 make snapshot    # Evidence DuckDB under dashboard/sources/lp/
+make eval        # QC scorecard → artifacts/qc_scorecard.md
+```
+
+Offline scorecard (no RPC; demo verify rows + mart sanity if warehouse exists):
+
+```bash
+uv run python -m lp_history.evals --offline
+```
+
+**Docker:**
+
+```bash
+make docker-build
+make docker-pipeline   # needs .env with LP_ETH_RPC_URL
+make docker-test       # pytest + offline scorecard inside the image
 ```
 
 PowerShell (no make):
@@ -53,6 +87,7 @@ uv run python -m lp_history.build_warehouse
 $env:LP_DUCKDB_PATH = "warehouse/lp.duckdb"
 uv run dbt build --project-dir dbt --profiles-dir dbt
 uv run python -m lp_history.export_snapshot
+uv run python -m lp_history.evals
 ```
 
 Dashboard (local):
@@ -68,7 +103,8 @@ Uniswap V3 **USDC/WETH 0.05%** — `0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640`
 A lookback of **2500 blocks** (~8–10h) usually captures Collect/Decrease cycles for
 fees and PnL-vs-HODL marts. Exact pool `liquidity()` match still needs a longer
 backfill (or PAYG Alchemy). Marts are **directional** — Collect may include
-principal; `fees_proxy ≈ Collect − Decrease`.
+principal; `fees_proxy ≈ Collect − Decrease`. The scorecard surfaces these caveats
+explicitly rather than hiding a partial verify behind a green check.
 
 ## Hourly refresh
 
@@ -87,16 +123,19 @@ src/lp_history/
   load/          Parquet + DuckDB loader
   state/         folds (reserves, positions, wallets)
   verify/        on-chain correctness checks
+  evals/         QC scorecard (verify summary + mart sanity)
   analytics/     price math + NFT snapshot for warehouse joins
 dbt/             staging → intermediate → marts (fees / IL vs HODL)
 dashboard/       Evidence report over marts snapshot
 tests/           fixtures + mocked RPC
+Dockerfile       reproducible Linux image (uv + pipeline)
 ```
 
 ## Development
 
 ```bash
 make lint && make test
+make eval
 ```
 
 ## Roadmap
@@ -105,5 +144,6 @@ make lint && make test
 - ~~Fees / IL / HODL benchmark in dbt + dashboard~~
 - ~~Public Evidence deploy on Vercel~~
 - ~~Scheduled snapshot refresh (GitHub Actions + deploy hook)~~
+- ~~QC scorecard + Docker~~
 - Full backfill from pool deployment + Dagster + live `eth_subscribe`
 - ClickHouse on a cheap VM

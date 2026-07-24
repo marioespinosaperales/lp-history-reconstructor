@@ -1,6 +1,6 @@
 # Requires make (on Windows: Git Bash, or `winget install GnuWin32.Make`).
 
-.PHONY: install lint test backfill warehouse transform snapshot pipeline
+.PHONY: install lint test backfill warehouse transform snapshot pipeline eval docker-build docker-pipeline docker-test
 
 install:
 	uv sync
@@ -24,3 +24,15 @@ snapshot:
 	uv run python -m lp_history.export_snapshot
 
 pipeline: backfill transform snapshot
+
+eval:
+	uv run python -m lp_history.evals
+
+docker-build:
+	docker compose build
+
+docker-pipeline:
+	docker compose run --rm pipeline
+
+docker-test:
+	docker compose run --rm test

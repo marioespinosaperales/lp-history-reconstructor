@@ -10,6 +10,7 @@ __pycache__/
 data/
 warehouse/
 logs/
+artifacts/
 *.duckdb
 *.duckdb.wal
 # Sole exception: marts snapshot Evidence needs at build time

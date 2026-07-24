@@ -1,0 +1,28 @@
+services:
+  pipeline:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data:/app/data
+      - ./warehouse:/app/warehouse
+      - ./artifacts:/app/artifacts
+    command:
+      - sh
+      - -c
+      - >-
+        uv run python -m lp_history.run
+        && uv run python -m lp_history.build_warehouse
+        && LP_DUCKDB_PATH=warehouse/lp.duckdb
+        uv run dbt build --project-dir dbt --profiles-dir dbt
+        && uv run python -m lp_history.evals
+
+  test:
+    build: .
+    volumes:
+      - ./artifacts:/app/artifacts
+    command:
+      - sh
+      - -c
+      - uv run pytest && uv run python -m lp_history.evals --offline

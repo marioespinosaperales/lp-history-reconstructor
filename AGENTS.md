@@ -12,6 +12,7 @@ Portfolio story: **ground-truth eval + metric caveats** (sibling: crypto contrac
 - `src/lp_history/state/` — V2 Sync fold, V3 position fold (range width), NPM tokenId→wallet
 - `src/lp_history/verify/` — getReserves() / liquidity()+slot0() / positions(tokenId)
 - `src/lp_history/evals/` — QC scorecard (verify summary + mart sanity + caveats)
+- `src/lp_history/ml/` — clear-exit trust model (IL/HODL usefulness)
 - `src/lp_history/analytics/` — price helpers + NFT snapshot enrichment for dbt
 - `src/lp_history/load/` — Parquet Hive store + DuckDB raw loader
 - `dbt/` — staging / intermediate / marts (business metrics)
@@ -35,5 +36,6 @@ Portfolio story: **ground-truth eval + metric caveats** (sibling: crypto contrac
 - `make transform` — NFT snapshot + DuckDB load + `dbt build`
 - `make snapshot` — export marts for Evidence
 - `make eval` — QC scorecard → `artifacts/qc_scorecard.md` (`--offline` for CI without RPC)
+- `make ml` — clear-exit trust report → `artifacts/ml_pnl_report.md`
 - `make docker-pipeline` / `make docker-test`
 - `make lint && make test` — required before every commit

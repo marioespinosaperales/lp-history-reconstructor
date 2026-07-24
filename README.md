@@ -40,6 +40,16 @@ directional (lookback / clear-exit caveats).
 | Reliable rubric | Exact / PARTIAL / SMOKE_OK vs `getReserves()` / `liquidity()` / `positions()` |
 | Controlled comparison | Fees and IL vs HODL by range-width buckets |
 | Validation loop | Live verify + mart sanity → `artifacts/qc_scorecard.md` with explicit caveats |
+| ML signal | Clear-exit trust classifier for IL/HODL usefulness → `artifacts/ml_pnl_report.md` |
+
+### ML (metric trust)
+
+Lightweight model predicting whether a position is a clear-exit case (IL vs HODL metrics
+are more trustworthy). Complements on-chain verify; does not replace ground-truth checks.
+
+```bash
+make ml   # → artifacts/ml_pnl_report.md
+```
 
 Sibling stories: [crypto-market-elt](https://github.com/marioespinosaperales/crypto-market-elt) (ingestion contracts) and [dex-trades-canonical](https://github.com/marioespinosaperales/dex-trades-canonical) (labeling rubric).
 
@@ -47,6 +57,7 @@ Sibling stories: [crypto-market-elt](https://github.com/marioespinosaperales/cry
 
 - **Ground-truth QC**: pool `liquidity()` vs in-range fold; NPM liquidity vs `positions(tokenId)`; V2 `getReserves()`
 - **Eval scorecard**: exact vs partial/smoke rates, clear-exit coverage, range-bucket counts, lookback caveats
+- **ML trust model**: `python -m lp_history.ml` predicts clear-exit so IL/HODL rows are not trusted blindly
 - **V3 concentrated liquidity**: positions keyed by `(owner, tickLower, tickUpper)` with **range width**
 - **NPM wallet attribution**: `tokenId → wallet` via ERC-721 `Transfer`
 - **Event sourcing**: net liquidity = fold of ordered Mint/Burn and Increase/DecreaseLiquidity
@@ -63,6 +74,7 @@ make backfill
 make transform   # NFT snapshot → DuckDB → dbt
 make snapshot    # Evidence DuckDB under dashboard/sources/lp/
 make eval        # QC scorecard → artifacts/qc_scorecard.md
+make ml          # clear-exit trust model → artifacts/ml_pnl_report.md
 ```
 
 Offline scorecard (no RPC; demo verify rows + mart sanity if warehouse exists):
@@ -124,6 +136,7 @@ src/lp_history/
   state/         folds (reserves, positions, wallets)
   verify/        on-chain correctness checks
   evals/         QC scorecard (verify summary + mart sanity)
+  ml/            clear-exit trust model (IL/HODL usefulness)
   analytics/     price math + NFT snapshot for warehouse joins
 dbt/             staging → intermediate → marts (fees / IL vs HODL)
 dashboard/       Evidence report over marts snapshot

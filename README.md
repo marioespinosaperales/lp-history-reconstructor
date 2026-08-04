@@ -41,6 +41,12 @@ directional (lookback / clear-exit caveats).
 | Controlled comparison | Fees and IL vs HODL by range-width buckets |
 | Validation loop | Live verify + mart sanity → `artifacts/qc_scorecard.md` with explicit caveats |
 | ML signal | Clear-exit trust classifier for IL/HODL usefulness → `artifacts/ml_pnl_report.md` |
+| Market structure | LP range microstructure + metric trust under incomplete history |
+
+This repo is also a **DeFi market-structure** analytics slice: concentrated-liquidity
+range choice, fees vs HODL, and clear-exit gating so IL metrics are not trusted on
+open positions. Same spirit as orderflow research elsewhere — measure carefully,
+document caveats, then decide what is product-grade.
 
 ### ML (metric trust)
 

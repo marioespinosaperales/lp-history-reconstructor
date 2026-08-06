@@ -26,3 +26,8 @@ Uniswap V3/V2 LP event sourcing: eth_getLogs → Parquet → fold/verify → Duc
 
 - Mock RPC with respx; fixtures under `tests/fixtures/`.
 - Run with `uv run pytest`.
+
+## Git commits
+
+- NEVER add `Co-authored-by: Cursor <cursoragent@cursor.com>`, `Made-with: Cursor`, or any Cursor attribution trailer.
+- Do not use `--trailer` for Cursor co-authors.
